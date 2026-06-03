@@ -1,0 +1,16 @@
+# --- Secrets & Environnement ---
+.env
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.venv/
+
+# --- IDE et OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
