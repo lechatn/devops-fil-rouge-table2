@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task Manager</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f4f6f9;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1a1a2e;
+      color: white;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    header h1 { font-size: 1.3rem; }
+
+    main { max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+
+    /* Form */
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      margin-bottom: 2rem;
+    }
+
+    .card h2 { font-size: 1rem; margin-bottom: 1rem; color: #444; }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .75rem;
+      margin-bottom: .75rem;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: .55rem .75rem;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: .9rem;
+      font-family: inherit;
+    }
+
+    textarea { resize: vertical; height: 70px; }
+
+    button {
+      padding: .55rem 1.25rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: .85rem;
+      font-family: inherit;
+      transition: opacity .15s;
+    }
+    button:hover { opacity: .85; }
+
+    .btn-primary { background: #1a1a2e; color: white; }
+    .btn-danger  { background: #e74c3c; color: white; }
+    .btn-archive { background: #95a5a6; color: white; }
+    .btn-done    { background: #27ae60; color: white; }
+
+    /* Filters */
+    .filters {
+      display: flex;
+      gap: .5rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .filters button {
+      background: white;
+      color: #555;
+      border: 1px solid #ddd;
+    }
+
+    .filters button.active {
+      background: #1a1a2e;
+      color: white;
+      border-color: #1a1a2e;
+    }
+
+    /* Task list */
+    .task-list { display: flex; flex-direction: column; gap: .75rem; }
+
+    .task-item {
+      background: white;
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .task-item.archived { opacity: .55; }
+
+    .task-info { flex: 1; }
+
+    .task-title { font-weight: 600; margin-bottom: .25rem; }
+
+    .task-desc { font-size: .85rem; color: #666; margin-bottom: .5rem; }
+
+    .task-meta { font-size: .75rem; color: #999; }
+
+    .badge {
+      display: inline-block;
+      padding: .2rem .6rem;
+      border-radius: 20px;
+      font-size: .72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+
+    .badge-todo       { background: #eaf0fb; color: #2980b9; }
+    .badge-in_progress{ background: #fef9e7; color: #d68910; }
+    .badge-done       { background: #eafaf1; color: #1e8449; }
+    .badge-archived   { background: #f2f3f4; color: #717d7e; }
+
+    .task-actions { display: flex; gap: .4rem; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+
+    .empty { text-align: center; color: #aaa; padding: 3rem 0; font-size: .95rem; }
+
+    #error-banner {
+      background: #fdecea;
+      color: #c0392b;
+      padding: .75rem 1rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      display: none;
+      font-size: .9rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Task Manager</h1>
+  <span id="task-count" style="font-size:.85rem;opacity:.7"></span>
+</header>
+
+<main>
+  <div id="error-banner"></div>
+
+  <div class="card">
+    <h2>Nouvelle tâche</h2>
+    <form id="create-form">
+      <div class="form-row">
+        <input type="text" id="f-title" placeholder="Titre *" required />
+        <input type="datetime-local" id="f-due" />
+      </div>
+      <textarea id="f-desc" placeholder="Description (optionnel)"></textarea>
+      <div style="margin-top:.75rem">
+        <button type="submit" class="btn-primary">Ajouter</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="filters" id="filters">
+    <button class="active" data-filter="">Toutes</button>
+    <button data-filter="todo">À faire</button>
+    <button data-filter="in_progress">En cours</button>
+    <button data-filter="done">Terminées</button>
+    <button data-filter="archived">Archivées</button>
+  </div>
+
+  <div class="task-list" id="task-list"></div>
+</main>
+
+<script>
+  const API = "http://localhost:8000";
+  let currentFilter = "";
+
+  const list   = document.getElementById("task-list");
+  const count  = document.getElementById("task-count");
+  const banner = document.getElementById("error-banner");
+
+  function showError(msg) {
+    banner.textContent = msg;
+    banner.style.display = "block";
+    setTimeout(() => banner.style.display = "none", 4000);
+  }
+
+  async function api(path, options = {}) {
+    const res = await fetch(API + path, {
+      headers: { "Content-Type": "application/json" },
+      ...options,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Erreur ${res.status}`);
+    }
+    if (res.status === 204) return null;
+    return res.json();
+  }
+
+  async function loadTasks() {
+    try {
+      const url = currentFilter ? `/tasks?status=${currentFilter}` : "/tasks";
+      const tasks = await api(url);
+      renderTasks(tasks);
+    } catch (e) {
+      showError("Impossible de charger les tâches : " + e.message);
+    }
+  }
+
+  function renderTasks(tasks) {
+    count.textContent = `${tasks.length} tâche${tasks.length !== 1 ? "s" : ""}`;
+    if (!tasks.length) {
+      list.innerHTML = '<p class="empty">Aucune tâche.</p>';
+      return;
+    }
+    list.innerHTML = tasks.map(t => `
+      <div class="task-item ${t.status === "archived" ? "archived" : ""}">
+        <div class="task-info">
+          <div class="task-title">${esc(t.title)} <span class="badge badge-${t.status}">${label(t.status)}</span></div>
+          ${t.description ? `<div class="task-desc">${esc(t.description)}</div>` : ""}
+          <div class="task-meta">
+            ${t.due_date ? "Échéance : " + fmtDate(t.due_date) + " · " : ""}
+            Créée le ${fmtDate(t.created_at)}
+          </div>
+        </div>
+        <div class="task-actions">
+          ${t.status !== "done" && t.status !== "archived" ? `<button class="btn-done" onclick="setStatus(${t.id},'done')">Terminée</button>` : ""}
+          ${t.status === "todo" ? `<button class="btn-primary" onclick="setStatus(${t.id},'in_progress')">Démarrer</button>` : ""}
+          ${t.status !== "archived" ? `<button class="btn-archive" onclick="archive(${t.id})">Archiver</button>` : ""}
+          <button class="btn-danger" onclick="remove(${t.id})">Suppr.</button>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  async function setStatus(id, status) {
+    try {
+      await api(`/tasks/${id}`, { method: "PUT", body: JSON.stringify({ status }) });
+      loadTasks();
+    } catch (e) { showError(e.message); }
+  }
+
+  async function archive(id) {
+    try {
+      await api(`/tasks/${id}/archive`, { method: "PATCH" });
+      loadTasks();
+    } catch (e) { showError(e.message); }
+  }
+
+  async function remove(id) {
+    if (!confirm("Supprimer cette tâche ?")) return;
+    try {
+      await api(`/tasks/${id}`, { method: "DELETE" });
+      loadTasks();
+    } catch (e) { showError(e.message); }
+  }
+
+  document.getElementById("create-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const title = document.getElementById("f-title").value.trim();
+    const description = document.getElementById("f-desc").value.trim() || null;
+    const due_date = document.getElementById("f-due").value || null;
+    try {
+      await api("/tasks", {
+        method: "POST",
+        body: JSON.stringify({ title, description, due_date }),
+      });
+      e.target.reset();
+      loadTasks();
+    } catch (err) { showError(err.message); }
+  });
+
+  document.getElementById("filters").addEventListener("click", e => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    document.querySelectorAll(".filters button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentFilter = btn.dataset.filter;
+    loadTasks();
+  });
+
+  function esc(s) {
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  function label(s) {
+    return { todo: "À faire", in_progress: "En cours", done: "Terminée", archived: "Archivée" }[s] || s;
+  }
+
+  function fmtDate(iso) {
+    return new Date(iso).toLocaleDateString("fr-FR", { day:"2-digit", month:"short", year:"numeric" });
+  }
+
+  loadTasks();
+</script>
+</body>
+</html>

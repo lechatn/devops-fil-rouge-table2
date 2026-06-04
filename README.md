@@ -73,3 +73,6 @@ Canal utilisé  :
 Participation S1 (optionnel, 2 lignes)
 Retour sur le jeu de rôle ou le cas déploiement : une leçon retenue pour le projet.
 -> La mise en pratique a mis en évidence l'importance de bien définir les rôles de chacun dès le départ pour éviter de se retrouver dans une situtation critique.
+
+Justification du choix de l'image de base : 
+L'image node:20-alpine a été choisie car elle s'appuie sur un environnement d'exécution officiel avec un tag de version explicite, évitant ainsi les problèmes liés au tag latest. De plus, la variante Alpine permet d'obtenir une image finale très légère en n'embarquant pas un système d'exploitation complet inutile pour notre cas d'usage.
