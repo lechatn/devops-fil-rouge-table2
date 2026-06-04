@@ -1,0 +1,67 @@
+version: '3.9'
+
+services:
+  # Base de données PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: postgres-task-db
+    environment:
+      # On utilise exactement les noms de ton .env
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - task-network
+
+  # Backend API (FastAPI)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: task-api
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      SECRET_KEY: ${SECRET_KEY}
+      ENVIRONMENT: ${ENVIRONMENT}
+    ports:
+      - "${API_PORT}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    networks:
+      - task-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend (Node.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: task-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - task-network
+
+volumes:
+  postgres_data:
+
+networks:
+  task-network:
+    driver: bridge

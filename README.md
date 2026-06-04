@@ -48,7 +48,7 @@ Jalons — état d'avancement
 | Séance | Livrable | Statut (à cocher) |
 | ------ | -------- | ----------------- |
 | S1 | README cadrage | ☑ |
-| S2 | Dockerfile(s) + DB en container | ☐ |
+| S2 | Dockerfile(s) + DB en container | ☑ |
 | S3 | docker-compose + CI vert | ☐ |
 | S4 | Manifests K8s appliqués | ☐ |
 | S5 | Monitoring + post-mortem | ☐ |
@@ -58,7 +58,16 @@ Jalons — état d'avancement
 
 Démarrage local (à compléter au fil des séances)
 # À documenter progressivement — pas besoin de tout remplir en S1
+
+1. Cloner le dépôt :
 git clone https://github.com/lechatn/devops-fil-rouge-table2.git
+cd devops-fil-rouge-table2
+
+2. Configurer les variables d'environnement :
+cp .env.example .env
+
+3. Démarrer les services avec Docker Compose :
+docker compose up -d --build
 
 
 ---
