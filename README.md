@@ -49,10 +49,10 @@ Jalons — état d'avancement
 | ------ | -------- | ----------------- |
 | S1 | README cadrage | ☑ |
 | S2 | Dockerfile(s) + DB en container | ☑ |
-| S3 | docker-compose + CI vert | ☐ |
-| S4 | Manifests K8s appliqués | ☐ |
-| S5 | Monitoring + post-mortem | ☐ |
-| S6 | Soutenance prête | ☐ |
+| S3 | docker-compose + CI vert | ☑ |
+| S4 | Manifests K8s appliqués | ☑ |
+| S5 | Monitoring + post-mortem | ☑ |
+| S6 | Soutenance prête | ☑ |
 
 ---
 
@@ -85,3 +85,17 @@ Retour sur le jeu de rôle ou le cas déploiement : une leçon retenue pour le p
 
 Justification du choix de l'image de base : 
 L'image node:20-alpine a été choisie car elle s'appuie sur un environnement d'exécution officiel avec un tag de version explicite, évitant ainsi les problèmes liés au tag latest. De plus, la variante Alpine permet d'obtenir une image finale très légère en n'embarquant pas un système d'exploitation complet inutile pour notre cas d'usage.
+
+
+
+Pipeline CI/CD (GitHub Actions)
+Réponses aux questions de justification :
+
+Pourquoi avoir séparé lint, test et build en jobs distincts ?
+Pour que si une étape échoue, le pipeline s'arrête immédiatement, ce qui isole l'erreur et économise du temps et des ressources de calcul.
+
+Que se passe-t-il si le push registry échoue alors que le build local OK ?
+Le pipeline est marqué en erreur et l'image n'est pas publiée sur le registre (GHCR), ce qui empêche de déployer une version non validée en production.
+
+Comment un nouveau membre d'équipe configure les secrets sur un fork ?
+Il n'a absolument rien à faire : l'utilisation de GHCR couplée à la variable intégrée ${{ secrets.GITHUB_TOKEN }} permet à GitHub de gérer l'authentification dynamiquement et automatiquement.
